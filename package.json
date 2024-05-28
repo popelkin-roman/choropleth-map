@@ -1,0 +1,15 @@
+{
+  "name": "choropleth-map",
+  "homepage": "https://popelkin-roman.github.io/choropleth-map/",
+  "version": "1.0.0",
+  "description": "Choropleth map built with D3.js",
+  "main": "index.html",
+  "scripts": {
+    "deploy": "gh-pages -d ./"
+  },
+  "author": "Roman Popelkin",
+  "license": "ISC",
+  "devDependencies": {
+    "gh-pages": "^6.1.1"
+  }
+}
