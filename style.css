@@ -5,17 +5,22 @@
 
 html, body {
     height: 100%;
+    background: rgb(187, 187, 187);
+    background: url('./usflag.jpg');
+    background-size: cover;
+    color: #aaa
 }
 
 #title {
     margin-top: 20px;
-    color: #333;
+    color: #ddd;
+    font-size: 2rem;
 }
 
 #description {
     margin: 20px 0px;
-    color: #333;
-    font-size: 1.4rem;
+    color: #ddd;
+    font-size: 1.2rem;
 }
 
 .container {
@@ -23,6 +28,8 @@ html, body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    height: 100vh;
+    backdrop-filter: blur(2px) brightness(20%);
 }
 
 #tooltip {
