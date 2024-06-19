@@ -1,84 +1,85 @@
-const dataurl = "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json"
+const educationDataUrl = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json";
+const countyDataUrl = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json";
 
-const data = fetch(dataurl)
-                .then((res) => res.json())
-                .then(data => drawCahrt(data));
+Promise.all([
+    fetch(educationDataUrl).then(res=>res.json()), 
+    fetch(countyDataUrl).then(res=>res.json())
+    ])
+        .then(data => drawCahrt(data))
+        .catch(err => console.log(err));
 
 const drawCahrt = (data) => {
+    const educationData = data[0];
+    const countyData = data[1];
+
     const w = 1000;
-    const h = 500;
-    const paddingX = 60;
-    const paddingY = 50;
-    const width = 5;
-    const height = (h-2*paddingY) / 12;
-    const baseTemp = data.baseTemperature;
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-    const color = d3.scaleSequential(d3.interpolateTurbo);
+    const h = 600;
+    const legendWidth = 40;
+    const legendHeight = 10;
     let currentCellColor = '';
-    const minYear = new Date(data.monthlyVariance[0].year, data.monthlyVariance[0].month);
-    const maxYear = new Date(
-      data.monthlyVariance[data.monthlyVariance.length - 1].year,
-      data.monthlyVariance[data.monthlyVariance.length - 1].month);
-    const minTemp = d3.min(data.monthlyVariance, d=>d.variance);
-    const maxTemp = d3.max(data.monthlyVariance, d=>d.variance);
-    const scaleYear = d3.scaleTime()
-        .domain([minYear, maxYear])
-        .range([paddingX, w - paddingX]);
-    const scaleMonth = d3.scaleBand()
-        .domain(months)
-        .range([paddingY, h - paddingY]);
-        
-    const svg = d3.select(".heatmap")
+
+    const minBachelorShare = d3.min(educationData, d=>d.bachelorsOrHigher);
+    const maxBachelorShare = d3.max(educationData, d=>d.bachelorsOrHigher);
+
+    const color = d3
+        .scaleThreshold()
+        .domain(d3.range(minBachelorShare, maxBachelorShare, (maxBachelorShare - minBachelorShare) / 8))
+        .range(d3.schemeGreens[9]);
+    
+    const scaleEducationLevel = d3.scaleLinear()
+        .domain([minBachelorShare, maxBachelorShare])
+        .range([0, 100]);
+
+    const path = d3.geoPath();
+
+    const svg = d3.select(".choroplethmap")
         .append("svg")
         .attr("width", w)
-        .attr("height", h);
+        .attr("height", h)
 
-  const legendContainer = svg.append('g')
-    .attr('id', 'legend')
-    .attr("transform", "translate(400,0)");
-  legendContainer.selectAll('rect')
-                .data([0,1,2,3,4,5,6,7,8,9])
-                .enter()
-                .append('rect')
-                .attr('x', (d,i)=>i * 4 * width)
-                .attr('width', d=>4 * width)
-                .attr('height', d=>4 * width)
-                .style("fill", d=> color(d/10))
-
-  const colorAxis = d3.axisBottom(d3.scaleLinear().domain([baseTemp+minTemp,baseTemp+maxTemp]).range([0, 10*4*width]));
-  const colorAxisLine = svg.append("g")
-        .attr("id", "color-axis")
-        .attr("transform", `translate(${400}, ${4*width})`)
-        .call(colorAxis);
-        
-    svg.selectAll("rect")
-        .data(data.monthlyVariance)
+    svg.append('g')
+        .attr('class', 'counties')
+        .selectAll('path')
+        .data(topojson.feature(countyData, countyData.objects.counties).features)
         .enter()
-        .append("rect")
-        .attr("x", (d) => scaleYear(new Date(d.year, 0, 1)) )
-        .attr("y", (d) => paddingY + (d.month -1)*height)
-        .attr("width", width)
-        .attr("height", height)
-        .attr("class", "cell")
-        .attr("data-year", d => d.year)
-        .attr("data-month", d =>  d.month-1)
-        .attr("data-temp", d => (baseTemp + d.variance).toFixed(2))
-        .style("fill", d=> color((d.variance - minTemp)/(maxTemp-minTemp)))
+        .append('path')
+        .attr('class', 'county')
+        .attr('data-fips', d => d.id)
+        .attr('data-education', d => {
+            let result = '';
+            educationData.forEach(el => {
+                if (el.fips === d.id) result = el.bachelorsOrHigher
+            })
+            if (!result) console.log("No education data for ", d.id)
+            return result;
+        })
+        .attr('fill', d => {
+            let result = 0;
+            educationData.forEach( el => {
+                if (el.fips === d.id) result = el.bachelorsOrHigher
+            })
+            return color(result);
+            
+        })
+        .attr('d', path)
         .on("mouseover", (e, d) => {
-          currentCellColor = e.target.style.fill;
+            currentCellColor = e.target.style.fill;
             e.target.style.fill = "#aaa";
             const tooltip = d3.select("#tooltip")
-                .attr("data-year", d.year)
-                .attr("data-month", d.month)
-                .attr("data-temp", d.variance)
+                .attr("data-education", e.target.dataset.education)
                 .style("visibility", "visible")
                 .style("transform", `translateX(${e.clientX}px) translateY(${e.clientY}px)`)
-            tooltip.append("div")
-                .text(d.year)
-            tooltip.append("div")
-                .text(months[d.month-1])
-            tooltip.append("div")
-                .text( (baseTemp + d.variance).toFixed(2) + " ℃")
+                .append("div")
+                .text((d => {
+                    let result = '';
+                    educationData.forEach(el => {
+                        if (el.fips === d.id) result += el.state + ", " + el.area_name;
+                    })
+                    if (!result) console.log("No education data for ", d.id)
+                        return result;
+                })(d))
+                .append("div")
+                    .text(e.target.dataset.education + "%")
         })
         .on("mouseout", (e) => {
             e.target.style.fill = currentCellColor;
@@ -86,22 +87,40 @@ const drawCahrt = (data) => {
                 .style("visibility", "hidden")
                 .text("");
             
-        })
+        });
+
+    const tooltip = d3.select('.choroplethmap')
+        .append('div')
+        .attr('class', 'tooltip')
+        .attr('id', 'tooltip')
+        .style('visibility', 'hidden');
     
-    const xAxis = d3.axisBottom(scaleYear);
-    const yAxis = d3.axisLeft(scaleMonth);
-    const xAxisLine = svg.append("g")
-        .attr("id", "x-axis")
-        .attr("transform", `translate(${0}, ${h - paddingY})`)
-        .call(xAxis);
+    
+    const legendContainer = svg
+    .append('g')
+    .attr('id', 'legend')
+    .attr("transform", `translate(${w/2},0)`);
 
-    const yAxisLine = svg.append("g")
-        .attr("id", "y-axis")
-        .attr("transform", `translate(${paddingX}, ${0})`)
-        .call(yAxis);
+    legendContainer.selectAll('rect')
+                .data(d3.range(minBachelorShare, maxBachelorShare, (maxBachelorShare - minBachelorShare) / 8))
+                .enter()
+                .append('rect')
+                .attr('x', (d,i)=>i * legendWidth)
+                .attr('width', legendWidth)
+                .attr('height', legendHeight)
+                .style("fill", d => color(d))
 
-    d3.select(".heatmap")
-        .append("div")
-        .attr("id", "tooltip")
-        .style("visibility", "hidden");
+    const legendXAxis = d3
+        .axisBottom(
+            d3.scaleLinear()
+                .domain([minBachelorShare, maxBachelorShare])
+                .range([0, 8*legendWidth]))
+        .tickSize(5)
+        .tickFormat( (x) =>  Math.round(x) + '%')
+        .tickValues(color.domain());
+
+    const legendXAxisLine = svg.append("g")
+        .attr("id", "legend-x-axis")
+        .attr("transform", `translate(${w/2}, ${legendHeight})`)
+        .call(legendXAxis)
 }
