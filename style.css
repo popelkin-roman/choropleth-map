@@ -1,0 +1,47 @@
+* {
+    padding: 0;
+    margin: 0;
+}
+
+html, body {
+    height: 100%;
+    background: rgb(187, 187, 187);
+    background: url('./usflag.jpg');
+    background-size: cover;
+    color: #aaa
+}
+
+#title {
+    margin-top: 20px;
+    color: #ddd;
+    font-size: 2rem;
+}
+
+#description {
+    margin: 20px 0px;
+    color: #ddd;
+    font-size: 1.2rem;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    backdrop-filter: blur(2px) brightness(20%);
+}
+
+#tooltip {
+    width: 100px;
+    padding: 8px;
+    border-radius: 10px;
+    position: absolute;
+    top: -80px;
+    left: 5px;
+    text-align: center;
+    opacity: 0.9;
+    color: antiquewhite;
+    background-color: #02070e;
+    box-shadow: 0px 0px 3px black;
+}
